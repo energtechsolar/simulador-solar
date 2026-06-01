@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Simulador Solar · Reforma Casa Brasil</title>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --azul: #003087; --laranja: #f47920; --amarelo: #ffc107;
+    --verde: #00a651; --cinza-claro: #f4f6fa; --cinza-medio: #d0d7e8;
+    --texto: #1a1f36; --sombra: 0 4px 24px rgba(0,48,135,0.10); --radius: 16px;
+  }
+  body { font-family: 'Sora', sans-serif; background: var(--cinza-claro); color: var(--texto); min-height: 100vh; }
+
+  header { background: linear-gradient(135deg, var(--azul) 60%, #0047cc 100%); color: white; padding: 28px 24px 42px; position: relative; overflow: hidden; }
+  header::after { content:''; position:absolute; bottom:-1px; left:0; right:0; height:28px; background:var(--cinza-claro); border-radius:28px 28px 0 0; }
+  .header-badge { display:inline-flex; align-items:center; gap:8px; background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.25); border-radius:100px; padding:5px 14px; font-size:11px; font-weight:600; letter-spacing:0.06em; text-transform:uppercase; margin-bottom:14px; }
+  header h1 { font-size:clamp(22px,5vw,30px); font-weight:800; line-height:1.15; }
+  header h1 span { color:var(--amarelo); }
+  header p { font-size:13px; opacity:0.8; margin-top:6px; font-weight:300; }
+  .sun-icon { position:absolute; top:16px; right:20px; font-size:60px; opacity:0.12; }
+
+  .container { max-width:520px; margin:0 auto; padding:0 16px 48px; }
+
+  .steps-bar { display:flex; align-items:center; justify-content:center; gap:0; margin:24px 0 20px; }
+  .step-dot { width:32px; height:32px; border-radius:50%; background:var(--cinza-medio); color:#888; font-size:12px; font-weight:700; display:flex; align-items:center; justify-content:center; transition:all 0.3s; flex-shrink:0; }
+  .step-dot.active { background:var(--azul); color:white; }
+  .step-dot.done { background:var(--verde); color:white; }
+  .step-line { flex:1; height:3px; background:var(--cinza-medio); transition:background 0.3s; max-width:48px; }
+  .step-line.done { background:var(--verde); }
+
+  .card { background:white; border-radius:var(--radius); box-shadow:var(--sombra); padding:24px 20px; margin-bottom:16px; display:none; animation:slideIn 0.35s ease; }
+  .card.active { display:block; }
+  @keyframes slideIn { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
+
+  .card-title { font-size:15px; font-weight:700; color:var(--azul); margin-bottom:18px; display:flex; align-items:center; gap:8px; }
+  .card-title .icon { width:32px; height:32px; background:#e8edf8; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:16px; }
+
+  .flbl { display:block; font-size:12px; font-weight:600; color:#555; margin-bottom:6px; letter-spacing:0.03em; text-transform:uppercase; }
+  input[type="number"], input[type="text"], input[type="tel"] {
+    width:100%; border:2px solid var(--cinza-medio); border-radius:10px; padding:12px 14px;
+    font-family:'DM Mono',monospace; font-size:16px; font-weight:500; color:var(--texto);
+    background:var(--cinza-claro); transition:border 0.2s; outline:none; -webkit-appearance:none;
+  }
+  input[type="text"], input[type="tel"] { font-family:'Sora',sans-serif; font-size:15px; }
+  input:focus { border-color:var(--azul); background:white; }
+  .input-prefix { position:relative; }
+  .input-prefix .pfx { position:absolute; left:14px; top:50%; transform:translateY(-50%); font-family:'DM Mono',monospace; font-size:14px; font-weight:600; color:#888; pointer-events:none; }
+  .input-prefix input { padding-left:40px; }
+  .field { margin-bottom:16px; }
+
+  input[type="range"] { -webkit-appearance:none; width:100%; height:6px; border-radius:3px; outline:none; padding:0; border:none; cursor:pointer; }
+  input[type="range"]::-webkit-slider-thumb { -webkit-appearance:none; width:22px; height:22px; border-radius:50%; background:var(--azul); border:3px solid white; box-shadow:0 2px 6px rgba(0,0,0,0.2); }
+  .range-labels { display:flex; justify-content:space-between; font-size:11px; color:#999; margin-top:4px; font-family:'DM Mono',monospace; }
+  .range-value { font-family:'DM Mono',monospace; font-size:22px; font-weight:700; color:var(--azul); text-align:center; margin-bottom:10px; }
+
+  .radio-group { display:flex; flex-direction:column; gap:8px; }
+  .radio-card { border:2px solid var(--cinza-medio); border-radius:10px; padding:12px 14px; cursor:pointer; transition:all 0.2s; display:flex; align-items:center; gap:12px; }
+  .radio-card:has(input:checked) { border-color:var(--azul); background:#eef2fb; }
+  .radio-card input { display:none; }
+  .radio-dot { width:18px; height:18px; border-radius:50%; border:2px solid var(--cinza-medio); flex-shrink:0; transition:all 0.2s; display:flex; align-items:center; justify-content:center; }
+  .radio-card:has(input:checked) .radio-dot { border-color:var(--azul); background:var(--azul); }
+  .radio-card:has(input:checked) .radio-dot::after { content:''; width:7px; height:7px; background:white; border-radius:50%; }
+  .radio-label { font-size:13px; font-weight:600; }
+  .radio-sub { font-size:11px; color:#777; margin-top:1px; font-weight:400; }
+
+  .pill-row { display:flex; gap:8px; }
+  .pill { flex:1; padding:11px 6px; border-radius:10px; border:2px solid var(--cinza-medio); text-align:center; cursor:pointer; transition:all 0.2s; font-size:13px; font-weight:700; background:var(--cinza-claro); color:#555; }
+  .pill span { display:block; font-size:10px; font-weight:400; opacity:0.65; font-family:'DM Mono',monospace; margin-top:2px; }
+  .pill.selected { border-color:var(--azul); background:var(--azul); color:white; }
+
+  .sistema-card { border-radius:12px; overflow:hidden; margin-bottom:12px; border:2px solid var(--amarelo); background:white; }
+  .sistema-header { background:var(--amarelo); padding:10px 14px; display:flex; align-items:center; justify-content:space-between; }
+  .sh-lbl { font-size:11px; font-weight:700; color:#7a5800; text-transform:uppercase; letter-spacing:0.06em; }
+  .sh-nome { font-size:15px; font-weight:800; color:var(--texto); }
+  .top-badge { background:var(--azul); color:white; font-size:9px; font-weight:800; padding:2px 7px; border-radius:100px; letter-spacing:0.08em; }
+  .sistema-grid { display:grid; grid-template-columns:repeat(3,1fr); }
+  .sg-item { padding:12px 10px; text-align:center; border-right:1px solid #f0f0f0; }
+  .sg-item:last-child { border:none; }
+  .sg-lbl { font-size:10px; color:#999; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:3px; }
+  .sg-val { font-family:'DM Mono',monospace; font-size:14px; font-weight:700; }
+  .sistema-preco { background:var(--cinza-claro); padding:12px 14px; display:flex; justify-content:space-between; align-items:center; border-top:1px solid #f0f0f0; }
+  .sp-lbl { font-size:12px; color:#777; }
+  .sp-val { font-family:'DM Mono',monospace; font-size:18px; font-weight:800; color:var(--azul); }
+
+  .tabela-toggle { font-size:12px; font-weight:600; color:var(--azul); cursor:pointer; text-align:center; padding:8px; display:block; text-decoration:underline; margin-bottom:4px; }
+  .tabela-sistemas { display:none; border-radius:10px; overflow:hidden; border:1px solid var(--cinza-medio); margin-bottom:16px; }
+  .tabela-sistemas.aberta { display:block; }
+  .ts-header { display:grid; grid-template-columns:2fr 1.2fr 1.2fr 1.5fr; background:var(--azul); color:white; font-size:10px; font-weight:700; letter-spacing:0.05em; text-transform:uppercase; padding:8px 10px; gap:4px; }
+  .ts-row { display:grid; grid-template-columns:2fr 1.2fr 1.2fr 1.5fr; padding:9px 10px; font-size:12px; gap:4px; align-items:center; border-bottom:1px solid #f0f2f8; cursor:pointer; transition:background 0.15s; }
+  .ts-row:last-child { border:none; }
+  .ts-row:hover { background:#f0f4ff; }
+  .ts-row.selecionado { background:#eef2fb; }
+  .ts-nome { font-weight:700; color:var(--azul); display:flex; align-items:center; gap:5px; }
+  .ts-top { background:var(--amarelo); color:#7a5800; font-size:8px; font-weight:800; padding:1px 5px; border-radius:100px; }
+  .ts-mono { font-family:'DM Mono',monospace; font-size:12px; }
+  .ts-preco { font-family:'DM Mono',monospace; font-weight:700; font-size:12px; }
+
+  .alert { border-radius:10px; padding:12px 14px; font-size:12px; line-height:1.5; margin-bottom:16px; display:flex; gap:10px; align-items:flex-start; }
+  .alert.info  { background:#e8f0fe; border-left:4px solid var(--azul); color:#1a3a80; }
+  .alert.success { background:#e6f4ea; border-left:4px solid var(--verde); color:#1a5c35; }
+  .alert.warning { background:#fff3e0; border-left:4px solid var(--laranja); color:#7a3e00; }
+
+  .preview-parcela { background:var(--cinza-claro); border-radius:10px; padding:14px 16px; margin-top:14px; display:flex; justify-content:space-between; align-items:center; }
+  .preview-parcela .plbl { font-size:12px; color:#666; font-weight:600; }
+  .preview-parcela .pval { font-family:'DM Mono',monospace; font-size:20px; font-weight:700; color:var(--azul); }
+  .data-parcela { background:#f0f4ff; border-radius:8px; padding:8px 12px; font-size:12px; color:var(--azul); font-weight:600; margin-top:8px; display:flex; align-items:center; gap:6px; }
+
+  .result-header { background:linear-gradient(135deg,var(--azul) 0%,#0047cc 100%); color:white; border-radius:var(--radius); padding:24px 20px; margin-bottom:16px; display:none; animation:slideIn 0.35s ease; }
+  .result-header.active { display:block; }
+  .result-sup { font-size:11px; opacity:0.65; letter-spacing:0.08em; text-transform:uppercase; margin-bottom:2px; }
+  .result-big { font-family:'DM Mono',monospace; font-size:38px; font-weight:700; line-height:1; }
+  .result-big .s { font-size:18px; opacity:0.6; }
+  .result-sub { font-size:12px; opacity:0.6; margin-top:4px; }
+  .result-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:16px; }
+  .rg-item { background:rgba(255,255,255,0.10); border-radius:10px; padding:12px; }
+  .rg-lbl { font-size:10px; opacity:0.6; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:3px; }
+  .rg-val { font-family:'DM Mono',monospace; font-size:15px; font-weight:700; }
+
+  .roi-section { background:white; border-radius:var(--radius); box-shadow:var(--sombra); overflow:hidden; margin-bottom:16px; display:none; animation:slideIn 0.35s ease; }
+  .roi-section.active { display:block; }
+  .roi-header { padding:16px 20px 12px; border-bottom:1px solid #f0f0f0; }
+  .roi-header .sup { font-size:10px; font-weight:700; color:#aaa; letter-spacing:0.1em; text-transform:uppercase; }
+  .roi-header h2 { font-size:18px; font-weight:800; color:var(--texto); margin-top:2px; }
+  .fase-bloco { padding:0 20px 16px; }
+  .fase-label { font-size:11px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; padding:7px 10px; border-radius:6px; margin:16px 0 10px; display:inline-block; }
+  .fase-label.f1 { background:#fff8e1; color:#8a6200; }
+  .fase-label.f2 { background:#e6f4ea; color:#1a5c35; }
+  .roi-row { display:flex; justify-content:space-between; align-items:center; font-size:13px; padding:9px 0; border-bottom:1px solid #f4f4f4; }
+  .roi-row:last-child { border:none; }
+  .roi-row .rl { color:#555; }
+  .roi-row .rv { font-family:'DM Mono',monospace; font-weight:700; font-size:14px; }
+  .roi-row .rv.verde { color:var(--verde); }
+  .roi-row .rv.vermelho { color:#d32f2f; }
+  .roi-row .rv.laranja { color:var(--laranja); }
+  .roi-row .rv.azul { color:var(--azul); }
+  .roi-row.total-row { background:#f8f9fc; border-radius:8px; padding:10px 12px; margin-top:6px; border:none; }
+  .roi-row.total-row .rl { font-weight:700; color:var(--texto); }
+  .roi-row.total-row .rv { font-size:16px; }
+  .credito-badge { background:#e8f0fe; border-radius:10px; padding:10px 14px; margin-top:8px; display:flex; align-items:center; gap:10px; }
+  .credito-badge .cb-icon { font-size:20px; flex-shrink:0; }
+  .credito-badge .cb-text { font-size:12px; color:#1a3a80; line-height:1.4; }
+  .econ-destaque { background:linear-gradient(135deg,var(--verde) 0%,#00c562 100%); color:white; border-radius:12px; padding:18px 16px; margin:0 20px; text-align:center; }
+  .ed-lbl { font-size:11px; opacity:0.8; text-transform:uppercase; letter-spacing:0.06em; }
+  .ed-val { font-family:'DM Mono',monospace; font-size:32px; font-weight:800; line-height:1.1; margin:4px 0; }
+  .ed-sub { font-size:12px; opacity:0.85; }
+
+  .parcela-destaque { background:var(--amarelo); border-radius:12px; padding:16px; text-align:center; margin-bottom:16px; }
+  .pd-lbl { font-size:11px; font-weight:600; opacity:0.65; text-transform:uppercase; letter-spacing:0.05em; }
+  .pd-val { font-family:'DM Mono',monospace; font-size:32px; font-weight:800; color:var(--azul); line-height:1.1; margin:4px 0; }
+  .pd-sub { font-size:12px; color:#444; }
+  .lib-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:12px 0; }
+  .lib-item { border-radius:10px; padding:12px; text-align:center; }
+  .lib-item.lib-90 { background:#e8f0fe; }
+  .lib-item.lib-10 { background:#f4f6fa; border:2px dashed var(--cinza-medio); }
+  .li-pct { font-size:22px; font-weight:800; color:var(--azul); font-family:'DM Mono',monospace; }
+  .li-val { font-size:13px; font-weight:700; margin-top:2px; font-family:'DM Mono',monospace; }
+  .li-lbl { font-size:10px; color:#777; margin-top:3px; line-height:1.3; }
+  .info-row { display:flex; justify-content:space-between; align-items:center; font-size:13px; padding:8px 0; border-bottom:1px dashed #eee; }
+  .info-row:last-child { border:none; }
+  .info-row .rl { color:#777; }
+  .info-row .rv { font-weight:700; font-family:'DM Mono',monospace; font-size:13px; }
+  .info-row .rv.d { color:var(--azul); font-size:15px; }
+
+  .divider { height:1px; background:var(--cinza-medio); margin:16px 0; }
+
+  .btn { width:100%; padding:15px; border-radius:12px; font-family:'Sora',sans-serif; font-size:15px; font-weight:700; border:none; cursor:pointer; transition:all 0.2s; letter-spacing:0.02em; display:block; text-align:center; }
+  .btn-primary { background:var(--azul); color:white; }
+  .btn-primary:hover { background:#002070; }
+  .btn-orange { background:var(--laranja); color:white; }
+  .btn-orange:hover { background:#d9600a; }
+  .btn-secondary { background:transparent; color:var(--azul); border:2px solid var(--cinza-medio); margin-top:10px; }
+  .btn-secondary:hover { border-color:var(--azul); }
+  .btn-voltar { background:none; border:none; color:var(--azul); font-family:'Sora',sans-serif; font-size:13px; font-weight:600; cursor:pointer; padding:0; display:flex; align-items:center; gap:4px; margin-bottom:16px; opacity:0.7; }
+  .btn-voltar:hover { opacity:1; }
+
+  .inelegivel-card { background:white; border-radius:var(--radius); box-shadow:var(--sombra); padding:32px 24px; text-align:center; display:none; animation:slideIn 0.35s ease; }
+  .inelegivel-card.active { display:block; }
+  .inelegivel-card h3 { font-size:18px; font-weight:800; color:#d32f2f; margin:12px 0 8px; }
+  .inelegivel-card p { font-size:13px; color:#555; line-height:1.6; }
+
+  .result-success { background:white; border-radius:var(--radius); box-shadow:var(--sombra); padding:32px 24px; text-align:center; margin-bottom:16px; display:none; animation:slideIn 0.35s ease; }
+  .result-success.active { display:block; }
+
+  .disclaimer { margin-top:16px; padding:14px; background:#f4f6fa; border-radius:10px; border-left:3px solid #d0d7e8; }
+  .disclaimer p { font-size:10px; color:#888; line-height:1.7; text-align:left; }
+  .disclaimer strong { color:#aaa; }
+
+  .nota { font-size:11px; color:#aaa; text-align:center; margin-top:12px; line-height:1.6; }
+  .caixa-footer { display:flex; align-items:center; justify-content:center; gap:8px; margin-top:20px; opacity:0.4; font-size:11px; font-weight:700; color:var(--azul); letter-spacing:0.08em; }
+  .caixa-footer::before, .caixa-footer::after { content:''; flex:1; height:1px; background:var(--cinza-medio); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="sun-icon">☀️</div>
+  <div class="header-badge">⚡ CAIXA · Reforma Casa Brasil</div>
+  <h1>Simulador de<br><span>Energia Solar</span></h1>
+  <p>Financiamento habitacional para instalação de placas solares</p>
+</header>
+
+<div class="container">
+
+  <div class="steps-bar">
+    <div class="step-dot active" id="s1">1</div>
+    <div class="step-line" id="l1"></div>
+    <div class="step-dot" id="s2">2</div>
+    <div class="step-line" id="l2"></div>
+    <div class="step-dot" id="s3">3</div>
+    <div class="step-line" id="l3"></div>
+    <div class="step-dot" id="s4">4</div>
+  </div>
+
+  <!-- ===== PASSO 1: DADOS + ELEGIBILIDADE ===== -->
+  <div class="card active" id="card1">
+    <div class="card-title"><div class="icon">👤</div>Seus Dados</div>
+
+    <div class="field">
+      <label class="flbl">Nome completo</label>
+      <input type="text" id="leadNome" placeholder="Seu nome completo">
+    </div>
+    <div class="field">
+      <label class="flbl">WhatsApp</label>
+      <input type="tel" id="leadFone" placeholder="(XX) 9XXXX-XXXX" oninput="mascaraFone(this)">
+    </div>
+    <div class="field">
+      <label class="flbl">Cidade</label>
+      <input type="text" id="leadCidade" placeholder="Ex: Quilombo">
+    </div>
+
+    <div class="field">
+      <label class="flbl">Valor médio da conta de energia (R$/mês)</label>
+      <div style="font-size:12px;color:#777;margin-bottom:8px">Quanto você paga por mês de energia elétrica</div>
+      <div class="input-prefix"><span class="pfx">R$</span>
+        <input type="number" id="contaEnergia" placeholder="Ex: 400" min="0" step="10">
+      </div>
+    </div>
+
+    <div class="field">
+      <label class="flbl">Tipo de ligação elétrica</label>
+      <div class="pill-row" id="ligPills">
+        <div class="pill selected" onclick="selecionarLigacao('mono',50,this)">Monofásico<span>R$ 50/mês</span></div>
+        <div class="pill" onclick="selecionarLigacao('bi',70,this)">Bifásico<span>R$ 70/mês</span></div>
+        <div class="pill" onclick="selecionarLigacao('tri',140,this)">Trifásico<span>R$ 140/mês</span></div>
+      </div>
+      <div style="font-size:11px;color:#999;margin-top:6px">Taxa fixa da concessionária (COSIP inclusa) — permanece mesmo com solar</div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="card-title" style="margin-bottom:14px"><div class="icon">🏠</div>Elegibilidade</div>
+
+    <div class="field">
+      <label class="flbl">Renda Familiar Bruta Mensal</label>
+      <div class="input-prefix"><span class="pfx">R$</span>
+        <input type="number" id="renda" placeholder="0,00" min="0" step="100" oninput="syncSlider(this.value)">
+      </div>
+    </div>
+    <div class="field">
+      <div class="range-value" id="rendaDisplay">R$ 0</div>
+      <input type="range" id="rendaSlider" min="0" max="13000" step="100" value="0" oninput="syncInput(this.value)">
+      <div class="range-labels"><span>R$ 0</span><span>R$ 13.000 (limite)</span></div>
+    </div>
+
+    <div class="field">
+      <label class="flbl">Imóvel em Área Urbana?</label>
+      <div class="radio-group">
+        <label class="radio-card"><input type="radio" name="urbano" value="sim"><div class="radio-dot"></div>
+          <div><div class="radio-label">✅ Sim, imóvel urbano</div><div class="radio-sub">Município ou área urbanizada</div></div>
+        </label>
+        <label class="radio-card"><input type="radio" name="urbano" value="nao"><div class="radio-dot"></div>
+          <div><div class="radio-label">🏡 Não, imóvel rural</div><div class="radio-sub">Zona rural / propriedade rural</div></div>
+        </label>
+      </div>
+    </div>
+    <div class="field">
+      <label class="flbl">Você reside neste imóvel?</label>
+      <div class="radio-group">
+        <label class="radio-card"><input type="radio" name="reside" value="sim"><div class="radio-dot"></div>
+          <div><div class="radio-label">✅ Sim, resido no imóvel</div></div>
+        </label>
+        <label class="radio-card"><input type="radio" name="reside" value="nao"><div class="radio-dot"></div>
+          <div><div class="radio-label">❌ Não resido aqui</div></div>
+        </label>
+      </div>
+    </div>
+    <div class="field">
+      <label class="flbl">Tem conta corrente ou poupança na CAIXA?</label>
+      <div class="radio-group">
+        <label class="radio-card"><input type="radio" name="conta" value="sim"><div class="radio-dot"></div>
+          <div><div class="radio-label">✅ Sim, tenho conta CAIXA</div></div>
+        </label>
+        <label class="radio-card"><input type="radio" name="conta" value="nao"><div class="radio-dot"></div>
+          <div><div class="radio-label">❌ Não tenho</div><div class="radio-sub">Necessário abrir conta antes de solicitar</div></div>
+        </label>
+      </div>
+    </div>
+
+    <button class="btn btn-primary" id="btnSimular" onclick="verificarEIniciar()">☀️ Ver minha Simulação →</button>
+  </div>
+
+  <!-- INELEGÍVEL -->
+  <div class="inelegivel-card" id="cardInelegivel">
+    <div style="font-size:48px">⚠️</div>
+    <h3>Não Elegível</h3>
+    <p id="inelegivelMsg"></p>
+    <button class="btn btn-secondary" style="margin-top:20px" onclick="voltarPasso(1)">← Corrigir Dados</button>
+  </div>
+
+  <!-- ===== PASSO 2: SISTEMA SUGERIDO ===== -->
+  <div class="card" id="card2">
+    <button class="btn-voltar" onclick="voltarPasso(1)">← Voltar</button>
+    <div class="card-title"><div class="icon">☀️</div>Sistema Recomendado</div>
+
+    <div class="alert success">✅ Dados recebidos! Com base no seu consumo, encontramos o sistema ideal para você.</div>
+
+    <div class="sistema-card">
+      <div class="sistema-header">
+        <div><div class="sh-lbl">Sistema Recomendado</div><div class="sh-nome" id="ss_nome">—</div></div>
+        <span class="top-badge" id="ss_topBadge" style="display:none">TOP</span>
+      </div>
+      <div class="sistema-grid">
+        <div class="sg-item"><div class="sg-lbl">Potência</div><div class="sg-val" id="ss_pot">—</div></div>
+        <div class="sg-item"><div class="sg-lbl">Módulos</div><div class="sg-val" id="ss_mod">—</div></div>
+        <div class="sg-item"><div class="sg-lbl">Geração/mês</div><div class="sg-val" id="ss_ger">—</div></div>
+      </div>
+      <div class="sistema-preco">
+        <span class="sp-lbl">Valor de tabela (kit importado)</span>
+        <span class="sp-val" id="ss_preco">—</span>
+      </div>
+    </div>
+
+    <span class="tabela-toggle" onclick="toggleTabela()">Ver todos os sistemas disponíveis ▾</span>
+    <div class="tabela-sistemas" id="tabelaSistemas">
+      <div class="ts-header"><div>Sistema</div><div>Geração</div><div>Módulos</div><div>Valor</div></div>
+      <div id="tabelaRows"></div>
+    </div>
+
+    <div id="alertaConsumoAlto" style="display:none" class="alert warning">
+      ⚠️ Consumo acima de 1.320 kWh/mês. O maior sistema atende até 1.320 kWh. Entraremos em contato para um projeto personalizado.
+    </div>
+
+    <button class="btn btn-primary" onclick="irParaPrazo()">Escolher Prazo →</button>
+  </div>
+
+  <!-- ===== PASSO 3: PRAZO ===== -->
+  <div class="card" id="card3">
+    <button class="btn-voltar" onclick="voltarPasso(2)">← Voltar</button>
+    <div class="card-title"><div class="icon">📅</div>Prazo do Financiamento</div>
+
+    <div style="background:var(--cinza-claro);border-radius:10px;padding:12px 14px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;">
+      <div>
+        <div style="font-size:10px;color:#999;text-transform:uppercase;letter-spacing:0.05em">Sistema selecionado</div>
+        <div style="font-size:14px;font-weight:700;color:var(--azul)" id="p3_sistema">—</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:10px;color:#999;text-transform:uppercase;letter-spacing:0.05em">Valor</div>
+        <div style="font-family:'DM Mono',monospace;font-size:16px;font-weight:800;color:var(--texto)" id="p3_valor">—</div>
+      </div>
+    </div>
+
+    <div class="alert info">ℹ️ Prazo de <strong>36 a 72 meses</strong>. Taxa: <strong>0,99% a.m.</strong> (12,55% a.a.). Débito em conta CAIXA.</div>
+
+    <div class="field">
+      <label class="flbl">Selecione o prazo</label>
+      <div class="pill-row" id="prazoPills">
+        <div class="pill" onclick="selecionarPrazo(36,this)">36<span>3 anos</span></div>
+        <div class="pill" onclick="selecionarPrazo(48,this)">48<span>4 anos</span></div>
+        <div class="pill selected" onclick="selecionarPrazo(60,this)">60<span>5 anos</span></div>
+        <div class="pill" onclick="selecionarPrazo(72,this)">72<span>6 anos</span></div>
+      </div>
+    </div>
+
+    <div class="preview-parcela">
+      <span class="plbl">Parcela mensal</span>
+      <span class="pval" id="previewVal">—</span>
+    </div>
+    <div class="data-parcela">📅 Primeira parcela estimada: <strong id="dataParcela">—</strong></div>
+
+    <button class="btn btn-primary" style="margin-top:16px" onclick="calcularResultado()">Ver Resultado Completo →</button>
+  </div>
+
+  <!-- RESULTADO HEADER -->
+  <div class="result-header" id="card4h">
+    <div class="result-sup">Valor Financiado</div>
+    <div class="result-big"><span class="s">R$</span> <span id="r_valFin">—</span></div>
+    <div class="result-sub" id="r_prazoInfo">—</div>
+    <div class="result-grid">
+      <div class="rg-item"><div class="rg-lbl">Parcela Mensal</div><div class="rg-val" id="r_parcela">—</div></div>
+      <div class="rg-item"><div class="rg-lbl">Total Pago</div><div class="rg-val" id="r_total">—</div></div>
+      <div class="rg-item"><div class="rg-lbl">Juros Totais</div><div class="rg-val" id="r_juros">—</div></div>
+      <div class="rg-item"><div class="rg-lbl">Custo/ano</div><div class="rg-val" id="r_custoAno">—</div></div>
+    </div>
+  </div>
+
+  <!-- ROI -->
+  <div class="roi-section" id="cardRoi">
+    <div class="roi-header">
+      <div class="sup">Análise Financeira</div>
+      <h2>O Retorno do Seu Investimento</h2>
+    </div>
+    <div class="fase-bloco">
+      <div class="fase-label f1">FASE 1 — DURANTE O FINANCIAMENTO</div>
+      <div id="roiFase1"></div>
+      <div id="creditoBadge"></div>
+    </div>
+    <div id="econDestaqueWrap" style="padding-bottom:16px"></div>
+    <div class="fase-bloco">
+      <div class="fase-label f2">FASE 2 — APÓS QUITAR O FINANCIAMENTO</div>
+      <div id="roiFase2"></div>
+    </div>
+    <div id="econDestaqueF2Wrap" style="padding-bottom:16px"></div>
+  </div>
+
+  <!-- DETALHES -->
+  <div class="card" id="card4d">
+    <button class="btn-voltar" onclick="voltarPasso(3)">← Ajustar prazo</button>
+    <div class="card-title"><div class="icon">📋</div>Detalhes do Financiamento</div>
+    <div class="parcela-destaque">
+      <div class="pd-lbl">Prestação Mensal</div>
+      <div class="pd-val" id="d_parcela">—</div>
+      <div class="pd-sub" id="d_parcelaInfo">—</div>
+    </div>
+    <div id="d_comprometimento"></div>
+    <div class="card-title" style="margin-top:4px"><div class="icon">💰</div>Liberação do Crédito</div>
+    <div class="lib-grid">
+      <div class="lib-item lib-90">
+        <div class="li-pct">90%</div><div class="li-val" id="d_lib90">—</div>
+        <div class="li-lbl">Após assinatura e aprovação das fotos iniciais</div>
+      </div>
+      <div class="lib-item lib-10">
+        <div class="li-pct">10%</div><div class="li-val" id="d_lib10">—</div>
+        <div class="li-lbl">Após fotos da obra concluída (até 55 dias)</div>
+      </div>
+    </div>
+    <div class="divider"></div>
+    <div class="card-title"><div class="icon">🔢</div>Resumo</div>
+    <div id="d_resumo"></div>
+    <div class="divider"></div>
+    <div class="alert info">📋 <strong>Apenas um contrato por CPF.</strong> Não é necessário dar o imóvel em garantia.</div>
+
+    <button class="btn btn-orange" onclick="abrirWhatsApp()" style="margin-top:8px">📲 Falar com especialista Energtech</button>
+    <button class="btn btn-secondary" onclick="reiniciar()">🔄 Nova Simulação</button>
+
+    <div class="disclaimer">
+      <p>
+        <strong style="letter-spacing:0.04em;text-transform:uppercase;font-size:9px">⚖️ Aviso Legal</strong><br>
+        Esta simulação é elaborada pela <strong>Energtech Engenharia Solar</strong> com base em parâmetros de referência de linhas de crédito habitacional para melhoria energética, e tem caráter <strong>exclusivamente informativo e ilustrativo</strong>. Os valores apresentados — incluindo parcelas, taxas de juros, prazos, limites de financiamento e condições de liberação de crédito — são estimativas baseadas em dados públicos disponíveis na data de elaboração e podem sofrer <strong>alterações sem aviso prévio</strong> pelas instituições financeiras competentes.<br><br>
+        A aprovação do crédito está sujeita à análise cadastral e de risco pela instituição financeira, podendo os valores diferir dos apresentados nesta simulação. A Energtech Engenharia Solar não é agente financeiro, não intermedia contratos de crédito e não possui qualquer vínculo oficial com a Caixa Econômica Federal. As informações sobre programas de financiamento são de responsabilidade exclusiva da instituição financeira ofertante.<br><br>
+        Os valores de geração de energia, economia estimada e payback são projeções baseadas em dados técnicos de referência e condições médias de irradiação solar da região. Resultados reais podem variar em função de fatores climáticos, consumo efetivo e tarifas vigentes. Esta simulação não constitui proposta comercial, contrato ou garantia de resultados.
+      </p>
+    </div>
+    <div class="caixa-footer">CAIXA Econômica Federal · Reforma Casa Brasil</div>
+  </div>
+
+  <!-- SUCESSO -->
+  <div class="result-success" id="cardLeadOk">
+    <div style="font-size:52px;margin-bottom:12px">🎉</div>
+    <h3 style="font-size:20px;font-weight:800;color:var(--verde);margin-bottom:8px">Simulação gerada!</h3>
+    <p style="font-size:14px;color:#555;line-height:1.6;margin-bottom:20px">
+      <strong id="leadNomeOk"></strong>, sua simulação foi registrada.<br>
+      Um especialista da Energtech entrará em contato pelo WhatsApp em breve. ☀️
+    </p>
+    <button class="btn btn-primary" onclick="abrirWhatsApp()">📲 Abrir WhatsApp agora</button>
+    <button class="btn btn-secondary" style="margin-top:10px" onclick="reiniciar()">🔄 Nova Simulação</button>
+  </div>
+
+</div>
+
+<script>
+  const TAXA          = 0.0099;
+  const T_ENERG       = 0.89;
+  const TARIFA_CELESC = 0.90;
+  const WEBHOOK_URL   = 'https://api.datacrazy.io/v1/crm/api/crm/flows/webhooks/aa8f1ca9-f4b2-4ff7-9d68-48acc8adac1e/36d3720c-b83f-48aa-9fec-18a4a5f7da71';
+
+  const SISTEMAS = [
+    {id:1,nome:"Sistema 1",pot:"4,96 kWp", modulos:8, inversor:"3 kW",   geracao:528, valor:12733.20,top:true},
+    {id:2,nome:"Sistema 2",pot:"6,2 kWp",  modulos:10,inversor:"5 kW",   geracao:660, valor:15880.86},
+    {id:3,nome:"Sistema 3",pot:"7,44 kWp", modulos:12,inversor:"5 kW",   geracao:792, valor:18135.90},
+    {id:4,nome:"Sistema 4",pot:"8,68 kWp", modulos:14,inversor:"6 kW",   geracao:924, valor:20546.46},
+    {id:5,nome:"Sistema 5",pot:"9,92 kWp", modulos:16,inversor:"2×3 kW", geracao:1056,valor:25050.06},
+    {id:6,nome:"Sistema 6",pot:"11,16 kWp",modulos:18,inversor:"3+4 kW", geracao:1188,valor:28051.92},
+    {id:7,nome:"Sistema 7",pot:"12,4 kWp", modulos:20,inversor:"3+4 kW", geracao:1320,valor:30169.26},
+  ];
+
+  let prazo = 60, valorSistema = 0, sistemaSelecionado = null;
+  let tipoLigacao = 'mono', taxaFixa = 50;
+
+  // ---- RENDA ----
+  function syncSlider(v) {
+    const val = Math.min(Number(v)||0, 99999);
+    document.getElementById('rendaSlider').value = Math.min(val,13000);
+    document.getElementById('rendaDisplay').textContent = 'R$ ' + fmtN(val);
+    setRangeGrad('rendaSlider', Math.min(val,13000), 0, 13000);
+  }
+  function syncInput(v) {
+    document.getElementById('renda').value = v;
+    document.getElementById('rendaDisplay').textContent = 'R$ ' + fmtN(Number(v));
+    setRangeGrad('rendaSlider', v, 0, 13000);
+  }
+  function setRangeGrad(id, val, min, max) {
+    const pct = ((val-min)/(max-min))*100;
+    document.getElementById(id).style.background =
+      `linear-gradient(to right,var(--azul) ${pct}%,var(--cinza-medio) ${pct}%)`;
+  }
+
+  // ---- LIGAÇÃO ----
+  function selecionarLigacao(tipo, valor, el) {
+    tipoLigacao = tipo; taxaFixa = valor;
+    document.querySelectorAll('#ligPills .pill').forEach(p => p.classList.remove('selected'));
+    el.classList.add('selected');
+  }
+
+  // ---- PRAZO ----
+  function selecionarPrazo(n, el) {
+    prazo = n;
+    document.querySelectorAll('#prazoPills .pill').forEach(p => p.classList.remove('selected'));
+    el.classList.add('selected');
+    atualizarPreview();
+  }
+
+  // ---- SISTEMA ----
+  function calcularSistema(contaR) {
+    const consumo = Math.round(contaR / TARIFA_CELESC);
+    if (consumo > 1320) return null;
+    return SISTEMAS.find(x => x.geracao >= consumo) || SISTEMAS[SISTEMAS.length-1];
+  }
+
+  function selecionarSistema(s) {
+    sistemaSelecionado = s; valorSistema = s.valor;
+    document.getElementById('ss_nome').textContent  = s.nome + ' — ' + s.pot;
+    document.getElementById('ss_mod').textContent   = s.modulos + ' módulos';
+    document.getElementById('ss_ger').textContent   = s.geracao + ' kWh';
+    document.getElementById('ss_pot').textContent   = s.pot;
+    document.getElementById('ss_preco').textContent = 'R$ ' + fmtR(s.valor);
+    document.getElementById('ss_topBadge').style.display = s.top ? 'inline' : 'none';
+    renderizarTabela();
+    atualizarPreview();
+  }
+
+  function selecionarSistemaDaTabela(id) {
+    selecionarSistema(SISTEMAS.find(x => x.id===id));
+    renderizarTabela();
+  }
+
+  function renderizarTabela() {
+    document.getElementById('tabelaRows').innerHTML = SISTEMAS.map(x => `
+      <div class="ts-row ${sistemaSelecionado && x.id===sistemaSelecionado.id?'selecionado':''}" onclick="selecionarSistemaDaTabela(${x.id})">
+        <div class="ts-nome">${x.nome}${x.top?'<span class="ts-top">TOP</span>':''}</div>
+        <div class="ts-mono">${x.geracao} kWh</div>
+        <div class="ts-mono">${x.modulos} mod.</div>
+        <div class="ts-preco">R$ ${fmtN(Math.round(x.valor))}</div>
+      </div>`).join('');
+  }
+
+  function toggleTabela() {
+    const t = document.getElementById('tabelaSistemas');
+    renderizarTabela();
+    t.classList.toggle('aberta');
+    document.querySelector('.tabela-toggle').textContent =
+      t.classList.contains('aberta') ? 'Ocultar tabela ▴' : 'Ver todos os sistemas disponíveis ▾';
+  }
+
+  // ---- PREVIEW ----
+  function atualizarPreview() {
+    if (valorSistema >= 10000 && valorSistema <= 50000) {
+      document.getElementById('previewVal').textContent = 'R$ ' + fmtR(calcPMT(valorSistema, prazo));
+    }
+    if (sistemaSelecionado) {
+      document.getElementById('p3_sistema').textContent = sistemaSelecionado.nome + ' · ' + sistemaSelecionado.pot;
+      document.getElementById('p3_valor').textContent   = 'R$ ' + fmtN(Math.round(sistemaSelecionado.valor));
+    }
+    const hoje = new Date();
+    const prox = new Date(hoje.getFullYear(), hoje.getMonth()+2, 1);
+    document.getElementById('dataParcela').textContent = prox.toLocaleDateString('pt-BR');
+  }
+
+  // ---- STEP 1: VERIFICAR + WEBHOOK ----
+  async function verificarEIniciar() {
+    const nome   = document.getElementById('leadNome').value.trim();
+    const fone   = document.getElementById('leadFone').value.trim();
+    const cidade = document.getElementById('leadCidade').value.trim();
+    const contaR = Number(document.getElementById('contaEnergia').value);
+    const renda  = Number(document.getElementById('renda').value);
+    const urbano = document.querySelector('input[name="urbano"]:checked')?.value;
+    const reside = document.querySelector('input[name="reside"]:checked')?.value;
+    const conta  = document.querySelector('input[name="conta"]:checked')?.value;
+
+    // Validar dados pessoais
+    if (!nome)   { alert('Informe seu nome completo.'); return; }
+    if (fone.replace(/\D/g,'').length < 10) { alert('Informe um WhatsApp válido.'); return; }
+    if (!cidade) { alert('Informe sua cidade.'); return; }
+    if (!contaR || contaR <= 0) { alert('Informe o valor da sua conta de energia.'); return; }
+
+    // Validar elegibilidade
+    let msg = '';
+    if (!renda)              msg = 'Informe sua renda familiar mensal.';
+    else if (renda > 13000)  msg = `Renda de R$ ${fmtN(renda)} supera o limite de <strong>R$ 13.000/mês</strong>.`;
+    else if (!urbano)        msg = 'Selecione o tipo do imóvel.';
+    else if (urbano==='nao') msg = 'O programa exige <strong>imóvel em área urbana</strong>.';
+    else if (!reside)        msg = 'Informe se você reside no imóvel.';
+    else if (reside==='nao') msg = 'O cliente deve <strong>residir no imóvel</strong> objeto da reforma.';
+    else if (!conta)         msg = 'Informe sobre a conta CAIXA.';
+    else if (conta==='nao')  msg = 'É necessário ter <strong>conta na CAIXA</strong> (corrente ou poupança).';
+
+    if (msg) { document.getElementById('inelegivelMsg').innerHTML = msg; mostrarCard('inelegivel'); return; }
+
+    // Calcular sistema
+    const consumoKwh = Math.round(contaR / TARIFA_CELESC);
+    const s = calcularSistema(contaR);
+    const nomeLig = tipoLigacao==='mono'?'Monofásico':tipoLigacao==='bi'?'Bifásico':'Trifásico';
+
+    // Loading
+    const btn = document.getElementById('btnSimular');
+    btn.textContent = '⏳ Gerando simulação...';
+    btn.disabled = true;
+
+    // Payload webhook — dispara antes de mostrar resultado
+    const payload = {
+      origem:               "Simulador Reforma Casa Brasil – CAIXA",
+      interesse:            "Financiamento Solar CAIXA",
+      etapa:                "Simulação gerada",
+      nome,
+      telefone:             fone.replace(/\D/g,''),
+      cidade,
+      renda_familiar:       renda,
+      conta_energia_r$:     contaR,
+      consumo_estimado_kwh: consumoKwh,
+      ligacao:              nomeLig,
+      taxa_fixa_mes:        taxaFixa,
+      sistema_recomendado:  s ? `${s.nome} · ${s.pot}` : 'Acima da tabela',
+      geracao_kwh_mes:      s ? s.geracao : null,
+      modulos:              s ? s.modulos : null,
+      inversor:             s ? s.inversor : null,
+      valor_sistema:        s ? s.valor : null,
+      tarifa_energtech:     T_ENERG,
+      economia_mes_estimada: s ? parseFloat(((s.geracao * T_ENERG) - taxaFixa).toFixed(2)) : null,
+      timestamp:            new Date().toISOString()
+    };
+
+    try {
+      await fetch(WEBHOOK_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+    } catch(e) {
+      console.warn('Webhook DataCrazy falhou:', e);
+    }
+
+    btn.textContent = '☀️ Ver minha Simulação →';
+    btn.disabled = false;
+
+    // Preparar WhatsApp
+    if (s) {
+      const pmt = calcPMT(s.valor, prazo);
+      const waMsg = encodeURIComponent(
+        `Olá! Sou ${nome}, de ${cidade}, e fiz uma simulação de energia solar pelo Reforma Casa Brasil.\n\n` +
+        `☀️ ${s.nome} · ${s.pot} · ${s.modulos} módulos\n` +
+        `⚡ Geração: ${s.geracao} kWh/mês\n` +
+        `💰 Valor: R$ ${fmtR(s.valor)}\n` +
+        `📅 Parcela estimada: R$ ${fmtR(pmt)} (${prazo}x)\n` +
+        `📍 Cidade: ${cidade}\n\n` +
+        `Gostaria de receber uma proposta da Energtech!`
+      );
+      window._waMsg = `https://wa.me/5549991478424?text=${waMsg}`;
+    }
+
+    // Consumo alto
+    if (!s) {
+      document.getElementById('alertaConsumoAlto').style.display = 'flex';
+      mostrarCard(2);
+      return;
+    }
+
+    selecionarSistema(s);
+    mostrarCard(2);
+  }
+
+  // ---- STEP 2 → 3 ----
+  function irParaPrazo() {
+    mostrarCard(3);
+    atualizarPreview();
+  }
+
+  // ---- CALCULAR RESULTADO ----
+  function calcularResultado() {
+    const contaAtual = Number(document.getElementById('contaEnergia').value||0);
+    const renda      = Number(document.getElementById('renda').value);
+    const s          = sistemaSelecionado;
+    const consumo    = Math.round(contaAtual / TARIFA_CELESC);
+
+    const pmt        = calcPMT(valorSistema, prazo);
+    const totalPago  = pmt * prazo;
+    const juros      = totalPago - valorSistema;
+    const lib90      = valorSistema * 0.9;
+    const lib10      = valorSistema * 0.1;
+
+    const valorEntregueMes = s.geracao * T_ENERG;
+    const sobraKwh  = s.geracao - consumo;
+    const sobraR    = sobraKwh * T_ENERG;
+    const saldoF1   = valorEntregueMes - pmt - taxaFixa;
+    const econLiqF2 = valorEntregueMes - taxaFixa;
+    const econAnoF2 = econLiqF2 * 12;
+    const payback   = econLiqF2 > 0 ? (valorSistema / econLiqF2 / 12).toFixed(1) : '—';
+    const nomeLig   = tipoLigacao==='mono'?'monofásico':tipoLigacao==='bi'?'bifásico':'trifásico';
+
+    // Header
+    document.getElementById('r_valFin').textContent    = fmtN(valorSistema);
+    document.getElementById('r_prazoInfo').textContent = `${prazo}x de R$ ${fmtR(pmt)} · 0,99% a.m.`;
+    document.getElementById('r_parcela').textContent   = 'R$ ' + fmtR(pmt);
+    document.getElementById('r_total').textContent     = 'R$ ' + fmtN(Math.round(totalPago));
+    document.getElementById('r_juros').textContent     = 'R$ ' + fmtN(Math.round(juros));
+    document.getElementById('r_custoAno').textContent  = 'R$ ' + fmtN(Math.round(pmt*12));
+
+    // ROI F1
+    const corSaldo   = saldoF1 >= 0 ? 'verde' : 'vermelho';
+    const labelSaldo = saldoF1 >= 0 ? '✅ Você já economiza' : '⚠️ Custo extra real por mês';
+    const sinalSaldo = saldoF1 >= 0 ? '+ ' : '';
+
+    document.getElementById('roiFase1').innerHTML = `
+      <div class="roi-row"><span class="rl">Energia solar gerada (${s.geracao} kWh × R$ 0,89)</span><span class="rv verde">R$ ${fmtR(valorEntregueMes)}/mês</span></div>
+      <div class="roi-row"><span class="rl">Parcela mensal do financiamento</span><span class="rv vermelho">− R$ ${fmtR(pmt)}/mês</span></div>
+      <div class="roi-row"><span class="rl">Taxa fixa concessionária (${nomeLig})</span><span class="rv laranja">− R$ ${fmtR(taxaFixa)}/mês</span></div>
+      <div class="roi-row total-row"><span class="rl">${labelSaldo}</span><span class="rv ${corSaldo}">${sinalSaldo}R$ ${fmtR(Math.abs(saldoF1))}/mês</span></div>`;
+
+    document.getElementById('creditoBadge').innerHTML = sobraKwh > 0
+      ? `<div class="credito-badge" style="margin-top:10px"><div class="cb-icon">🔋</div><div class="cb-text">Sobra de energia: <strong>+${sobraKwh} kWh/mês</strong> (R$ ${fmtR(sobraR)}) acumulados como crédito na concessionária para meses de menor geração.</div></div>`
+      : sobraKwh < 0 ? `<div class="credito-badge" style="margin-top:10px;background:#fff3e0"><div class="cb-icon">⚡</div><div class="cb-text" style="color:#7a3e00">Déficit de <strong>${Math.abs(sobraKwh)} kWh/mês</strong> (R$ ${fmtR(Math.abs(sobraR))}) complementado pela rede — incluído na taxa fixa.</div></div>` : '';
+
+    document.getElementById('econDestaqueWrap').innerHTML = saldoF1 >= 0
+      ? `<div class="econ-destaque"><div class="ed-lbl">Você já economiza desde o 1º mês</div><div class="ed-val">R$ ${fmtR(saldoF1)}/mês</div><div class="ed-sub">R$ ${fmtN(Math.round(saldoF1*12))} economizados por ano durante o financiamento</div></div>`
+      : `<div style="margin:0 20px;padding:12px 14px;background:#fff3e0;border-radius:10px;border-left:4px solid var(--laranja);font-size:12px;color:#7a3e00">⚠️ Durante o financiamento há um custo extra de <strong>R$ ${fmtR(Math.abs(saldoF1))}/mês</strong>. Após quitar, a economia líquida é total.</div>`;
+
+    // ROI F2
+    document.getElementById('roiFase2').innerHTML = `
+      <div class="roi-row"><span class="rl">Energia solar gerada (${s.geracao} kWh × R$ 0,89)</span><span class="rv verde">R$ ${fmtR(valorEntregueMes)}/mês</span></div>
+      <div class="roi-row"><span class="rl">Taxa fixa concessionária (${nomeLig})</span><span class="rv laranja">− R$ ${fmtR(taxaFixa)}/mês</span></div>
+      <div class="roi-row total-row"><span class="rl">✅ Economia líquida mensal</span><span class="rv verde">R$ ${fmtR(econLiqF2)}/mês</span></div>
+      <div class="roi-row"><span class="rl">Economia líquida anual</span><span class="rv verde">R$ ${fmtN(Math.round(econAnoF2))}/ano</span></div>
+      <div class="roi-row"><span class="rl">Payback total do sistema</span><span class="rv azul">${payback} anos</span></div>`;
+
+    document.getElementById('econDestaqueF2Wrap').innerHTML = econLiqF2 > 0
+      ? `<div class="econ-destaque"><div class="ed-lbl">Após quitar — economia anual</div><div class="ed-val">R$ ${fmtN(Math.round(econAnoF2))}/ano</div><div class="ed-sub">R$ ${fmtR(econLiqF2)}/mês · por décadas</div></div>` : '';
+
+    // Detalhes
+    document.getElementById('d_parcela').textContent     = 'R$ ' + fmtR(pmt);
+    document.getElementById('d_parcelaInfo').textContent = `${prazo}x · Débito automático CAIXA`;
+    document.getElementById('d_lib90').textContent       = 'R$ ' + fmtR(lib90);
+    document.getElementById('d_lib10').textContent       = 'R$ ' + fmtR(lib10);
+
+    const comprPct = (pmt/renda)*100;
+    document.getElementById('d_comprometimento').innerHTML = comprPct <= 30
+      ? `<div class="alert success" style="margin-bottom:16px">✅ Parcela representa <strong>${comprPct.toFixed(1)}% da renda</strong> — dentro do limite de 30%.</div>`
+      : `<div class="alert warning" style="margin-bottom:16px">⚠️ Parcela representa <strong>${comprPct.toFixed(1)}% da renda</strong>. Acima de 30% pode dificultar aprovação.</div>`;
+
+    document.getElementById('d_resumo').innerHTML = `
+      <div class="info-row"><span class="rl">Sistema</span><span class="rv">${s.nome} · ${s.pot}</span></div>
+      <div class="info-row"><span class="rl">Módulos / Inversor</span><span class="rv">${s.modulos} mod. · ${s.inversor}</span></div>
+      <div class="info-row"><span class="rl">Geração estimada</span><span class="rv">${s.geracao} kWh/mês</span></div>
+      <div class="info-row"><span class="rl">Valor do sistema</span><span class="rv">R$ ${fmtR(s.valor)}</span></div>
+      <div class="info-row"><span class="rl">Valor financiado</span><span class="rv d">R$ ${fmtN(valorSistema)}</span></div>
+      <div class="info-row"><span class="rl">Prazo</span><span class="rv">${prazo} meses</span></div>
+      <div class="info-row"><span class="rl">Taxa</span><span class="rv">0,99% a.m. · 12,55% a.a.</span></div>
+      <div class="info-row"><span class="rl">Parcela</span><span class="rv d">R$ ${fmtR(pmt)}</span></div>
+      <div class="info-row"><span class="rl">Total com juros</span><span class="rv">R$ ${fmtN(Math.round(totalPago))}</span></div>`;
+
+    mostrarCard(4);
+  }
+
+  // ---- UTILS ----
+  function mascaraFone(el) {
+    let v = el.value.replace(/\D/g,'');
+    if(v.length>11) v=v.slice(0,11);
+    if(v.length>6) v=`(${v.slice(0,2)}) ${v.slice(2,7)}-${v.slice(7)}`;
+    else if(v.length>2) v=`(${v.slice(0,2)}) ${v.slice(2)}`;
+    else if(v.length>0) v=`(${v}`;
+    el.value=v;
+  }
+  function abrirWhatsApp() { if(window._waMsg) window.open(window._waMsg,'_blank'); }
+  function calcPMT(pv,n) { return pv*(TAXA*Math.pow(1+TAXA,n))/(Math.pow(1+TAXA,n)-1); }
+  function fmtN(n) { return Number(n).toLocaleString('pt-BR'); }
+  function fmtR(n) { return Number(n).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+
+  // ---- NAVEGAÇÃO ----
+  function mostrarCard(num) {
+    ['card1','card2','card3','card4h','cardRoi','card4d','cardLeadOk','cardInelegivel']
+      .forEach(id => { const el=document.getElementById(id); if(el) el.classList.remove('active'); });
+    [1,2,3,4].forEach(i => document.getElementById('s'+i)?.classList.remove('active','done'));
+    [1,2,3].forEach(i => document.getElementById('l'+i)?.classList.remove('done'));
+
+    if (num==='inelegivel') {
+      document.getElementById('cardInelegivel').classList.add('active');
+      document.getElementById('s1').classList.add('active');
+    } else {
+      for(let i=1;i<num;i++){
+        document.getElementById('s'+i).classList.add('done');
+        if(i<=3) document.getElementById('l'+i).classList.add('done');
+      }
+      document.getElementById('s'+num).classList.add('active');
+      if(num<=3) { document.getElementById('card'+num).classList.add('active'); }
+      else { ['card4h','cardRoi','card4d'].forEach(id=>document.getElementById(id).classList.add('active')); }
+    }
+    window.scrollTo({top:0,behavior:'smooth'});
+  }
+
+  function voltarPasso(n) { mostrarCard(n); }
+
+  function reiniciar() {
+    ['leadNome','leadFone','leadCidade','contaEnergia','renda'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('rendaSlider').value=0;
+    document.getElementById('rendaDisplay').textContent='R$ 0';
+    document.querySelectorAll('input[type="radio"]').forEach(r=>r.checked=false);
+    document.getElementById('tabelaSistemas').classList.remove('aberta');
+    document.getElementById('alertaConsumoAlto').style.display='none';
+    prazo=60; valorSistema=0; sistemaSelecionado=null; tipoLigacao='mono'; taxaFixa=50;
+    document.querySelectorAll('#ligPills .pill').forEach((p,i)=>p.classList.toggle('selected',i===0));
+    document.querySelectorAll('#prazoPills .pill').forEach((p,i)=>p.classList.toggle('selected',i===2));
+    setRangeGrad('rendaSlider',0,0,13000);
+    mostrarCard(1);
+  }
+
+  // Init
+  setRangeGrad('rendaSlider',0,0,13000);
+  const _prox = new Date(); _prox.setMonth(_prox.getMonth()+2); _prox.setDate(1);
+  document.getElementById('dataParcela').textContent = _prox.toLocaleDateString('pt-BR');
+</script>
+</body>
+</html>
