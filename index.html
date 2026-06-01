@@ -224,7 +224,12 @@
     </div>
     <div class="field">
       <label class="flbl">WhatsApp</label>
-      <input type="tel" id="leadFone" placeholder="(XX) 9XXXX-XXXX" oninput="mascaraFone(this)">
+      <div style="display:flex;gap:8px;align-items:center;">
+        <div style="display:flex;align-items:center;gap:6px;background:var(--cinza-claro);border:2px solid var(--cinza-medio);border-radius:10px;padding:12px 12px;flex-shrink:0;font-family:'DM Mono',monospace;font-size:15px;font-weight:600;color:var(--texto);">
+          🇧🇷 +55
+        </div>
+        <input type="tel" id="leadFone" placeholder="(XX) 9XXXX-XXXX" oninput="mascaraFone(this)" style="flex:1;">
+      </div>
     </div>
     <div class="field">
       <label class="flbl">Cidade</label>
@@ -624,7 +629,7 @@
       interesse:            "Financiamento Solar CAIXA",
       etapa:                "Simulação gerada",
       nome,
-      telefone:             fone.replace(/\D/g,''),
+      telefone:             '+55' + fone.replace(/\D/g,''),
       cidade,
       renda_familiar:       renda,
       conta_energia_r$:     contaR,
@@ -666,7 +671,7 @@
         `📍 Cidade: ${cidade}\n\n` +
         `Gostaria de receber uma proposta da Energtech!`
       );
-      window._waMsg = `https://wa.me/5549991478424?text=${waMsg}`;
+      window._waMsg = `https://wa.me/55${fone.replace(/\D/g,'')}?text=${waMsg}`;
     }
 
     // Consumo alto
