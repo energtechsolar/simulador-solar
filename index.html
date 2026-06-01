@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -785,7 +786,22 @@
     else if(v.length>0) v=`(${v}`;
     el.value=v;
   }
-  function abrirWhatsApp() { if(window._waMsg) window.open(window._waMsg,'_blank'); }
+  function abrirWhatsApp() {
+    const s   = sistemaSelecionado;
+    const pmt = s ? calcPMT(valorSistema, prazo) : null;
+    const nome   = document.getElementById('leadNome').value.trim();
+    const cidade = document.getElementById('leadCidade').value.trim();
+    const msg = s ? encodeURIComponent(
+      `Olá! Sou ${nome}, de ${cidade}, e fiz uma simulação de energia solar pelo Reforma Casa Brasil.\n\n` +
+      `☀️ ${s.nome} · ${s.pot} · ${s.modulos} módulos\n` +
+      `⚡ Geração: ${s.geracao} kWh/mês\n` +
+      `💰 Valor: R$ ${fmtR(s.valor)}\n` +
+      `📅 Parcela estimada: R$ ${fmtR(pmt)} (${prazo}x)\n` +
+      `📍 Cidade: ${cidade}\n\n` +
+      `Gostaria de receber uma proposta da Energtech!`
+    ) : '';
+    window.open(`https://wa.me/5549991478424?text=${msg}`, '_blank');
+  }
   function calcPMT(pv,n) { return pv*(TAXA*Math.pow(1+TAXA,n))/(Math.pow(1+TAXA,n)-1); }
   function fmtN(n) { return Number(n).toLocaleString('pt-BR'); }
   function fmtR(n) { return Number(n).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
