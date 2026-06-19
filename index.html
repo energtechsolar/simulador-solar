@@ -191,6 +191,14 @@
   .nota { font-size:11px; color:#aaa; text-align:center; margin-top:12px; line-height:1.6; }
   .caixa-footer { display:flex; align-items:center; justify-content:center; gap:8px; margin-top:20px; opacity:0.4; font-size:11px; font-weight:700; color:var(--azul); letter-spacing:0.08em; }
   .caixa-footer::before, .caixa-footer::after { content:''; flex:1; height:1px; background:var(--cinza-medio); }
+  .s3-card { background:rgba(255,255,255,0.12); border:2px solid rgba(255,255,255,0.2); border-radius:10px; padding:10px 14px; cursor:pointer; transition:all 0.2s; display:flex; justify-content:space-between; align-items:center; }
+  .s3-card.selected { background:white; border-color:white; }
+  .s3-card .s3-nome { font-size:13px; font-weight:700; color:white; }
+  .s3-card.selected .s3-nome { color:var(--azul); }
+  .s3-card .s3-info { font-size:11px; color:rgba(255,255,255,0.7); margin-top:2px; }
+  .s3-card.selected .s3-info { color:#555; }
+  .s3-card .s3-val { font-family:'DM Mono',monospace; font-size:14px; font-weight:800; color:rgba(255,255,255,0.9); }
+  .s3-card.selected .s3-val { color:var(--azul); }
 </style>
 </head>
 <body>
@@ -341,20 +349,19 @@
   <!-- PASSO 3 -->
   <div class="card" id="card3">
     <button class="btn-voltar" onclick="voltarPasso(2)">← Voltar</button>
-    <div class="card-title"><div class="icon">📅</div>Prazo do Financiamento</div>
-    <div style="background:var(--cinza-claro);border-radius:10px;padding:12px 14px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;">
-      <div>
-        <div style="font-size:10px;color:#999;text-transform:uppercase;letter-spacing:0.05em">Sistema selecionado</div>
-        <div style="font-size:14px;font-weight:700;color:var(--azul)" id="p3_sistema">—</div>
-      </div>
-      <div style="text-align:right">
-        <div style="font-size:10px;color:#999;text-transform:uppercase;letter-spacing:0.05em">Valor</div>
-        <div style="font-family:'DM Mono',monospace;font-size:16px;font-weight:800;color:var(--texto)" id="p3_valor">—</div>
-      </div>
-    </div>
+    <div class="card-title"><div class="icon">⚙️</div>Personalize sua Simulação</div>
+
     <div class="alert info">ℹ️ Prazo de <strong>36 a 72 meses</strong>. Taxa: <strong>0,99% a.m.</strong> (12,55% a.a.). Débito em conta CAIXA.</div>
-    <div class="field">
-      <label class="flbl">Selecione o prazo</label>
+
+    <!-- SELEÇÃO DE SISTEMA -->
+    <div style="background:linear-gradient(135deg,var(--azul) 0%,#0047cc 100%);border-radius:12px;padding:14px 16px;margin-bottom:16px;">
+      <div style="font-size:12px;font-weight:800;color:rgba(255,255,255,0.7);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px;">☀️ Selecione seu sistema</div>
+      <div id="sistemaCards3" style="display:flex;flex-direction:column;gap:8px;"></div>
+    </div>
+
+    <!-- SELEÇÃO DE PRAZO -->
+    <div style="background:var(--amarelo);border-radius:12px;padding:14px 16px;margin-bottom:16px;">
+      <div style="font-size:12px;font-weight:800;color:#7a5800;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px;">📅 Selecione o prazo</div>
       <div class="pill-row" id="prazoPills">
         <div class="pill" onclick="selecionarPrazo(36,this)">36<span>3 anos</span></div>
         <div class="pill" onclick="selecionarPrazo(48,this)">48<span>4 anos</span></div>
@@ -362,9 +369,17 @@
         <div class="pill" onclick="selecionarPrazo(72,this)">72<span>6 anos</span></div>
       </div>
     </div>
-    <div class="preview-parcela">
-      <span class="plbl">Parcela mensal</span>
-      <span class="pval" id="previewVal">—</span>
+
+    <!-- PREVIEW -->
+    <div style="background:white;border:2px solid var(--azul);border-radius:12px;padding:14px 16px;margin-bottom:12px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <span style="font-size:12px;font-weight:700;color:var(--azul);" id="p3_sistema">—</span>
+        <span style="font-family:'DM Mono',monospace;font-size:14px;font-weight:800;color:var(--texto);" id="p3_valor">—</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-size:12px;color:#666;font-weight:600;">Parcela mensal estimada</span>
+        <span style="font-family:'DM Mono',monospace;font-size:22px;font-weight:800;color:var(--azul);" id="previewVal">—</span>
+      </div>
     </div>
     <div class="data-parcela">📅 Primeira parcela estimada: <strong id="dataParcela">—</strong></div>
     <button class="btn btn-primary" style="margin-top:16px" onclick="calcularResultado()">Ver Resultado Completo →</button>
@@ -671,7 +686,27 @@
   }
 
   function irParaPrazo() {
+    renderizarSistemasP3();
     mostrarCard(3);
+    atualizarPreview();
+  }
+
+  function renderizarSistemasP3() {
+    const container = document.getElementById('sistemaCards3');
+    container.innerHTML = SISTEMAS.map(s => `
+      <div class="s3-card ${sistemaSelecionado && s.id===sistemaSelecionado.id ? 'selected' : ''}"
+           onclick="selecionarSistemaP3(${s.id})">
+        <div>
+          <div class="s3-nome">${s.nome} · ${s.pot} · ${s.modulos} módulos</div>
+          <div class="s3-info">Geração: ${s.geracao} kWh/mês</div>
+        </div>
+        <div class="s3-val">R$ ${fmtN(Math.round(s.valor))}</div>
+      </div>`).join('');
+  }
+
+  function selecionarSistemaP3(id) {
+    selecionarSistema(SISTEMAS.find(x => x.id===id));
+    renderizarSistemasP3();
     atualizarPreview();
   }
 
