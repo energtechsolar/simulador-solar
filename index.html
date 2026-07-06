@@ -664,26 +664,37 @@
     btn.textContent = '⏳ Gerando simulação...';
     btn.disabled = true;
 
-    // Payload webhook — dispara antes de mostrar resultado
+    // Payload DataCrazy — campos mapeados para os campos personalizados do CRM
     const payload = {
+      // Identificação do lead
       origem:               "Simulador Reforma Casa Brasil – CAIXA",
       interesse:            "Financiamento Solar CAIXA",
       etapa:                "Simulação gerada",
+
+      // Dados pessoais
       nome,
       telefone:             '+55' + fone.replace(/\D/g,''),
-      cidade,
+      cidade:               cidade,
       renda_familiar:       renda,
+
+      // Campos personalizados DataCrazy
+      "Consumo kWh/mês":    consumoKwh,
+      simulador_modulos:    s ? s.modulos : null,
+      simulador_geracao:    s ? s.geracao : null,
+      simulador_valor:      s ? s.valor : null,
+      simulador_parcela:    s ? parseFloat(calcPMT(s.valor, prazo).toFixed(2)) : null,
+      simulador_prazo:      prazo,
+      simulador_cidade:     cidade,
+
+      // Dados extras
       conta_energia_r$:     contaR,
-      consumo_estimado_kwh: consumoKwh,
       ligacao:              nomeLig,
       taxa_fixa_mes:        taxaFixa,
-      sistema_recomendado:  s ? `${s.nome} · ${s.pot}` : 'Acima da tabela',
-      geracao_kwh_mes:      s ? s.geracao : null,
-      modulos:              s ? s.modulos : null,
+      sistema_recomendado:  s ? s.nome : 'Acima da tabela',
       inversor:             s ? s.inversor : null,
-      valor_sistema:        s ? s.valor : null,
+      economia_mes_fase2:   s ? parseFloat(((s.geracao * T_ENERG) - taxaFixa).toFixed(2)) : null,
+      economia_ano_fase2:   s ? parseFloat((((s.geracao * T_ENERG) - taxaFixa)*12).toFixed(2)) : null,
       tarifa_energtech:     T_ENERG,
-      economia_mes_estimada: s ? parseFloat(((s.geracao * T_ENERG) - taxaFixa).toFixed(2)) : null,
       timestamp:            new Date().toISOString()
     };
 
